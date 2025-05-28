@@ -253,6 +253,22 @@
         </button>
     </nav>
 
+    <div id="hiragana-options-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-lg w-full relative">
+            <button id="close-hiragana-options" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold">&times;</button>
+            <h3 class="text-2xl font-bold text-center text-indigo-700 mb-6">Choose a Hiragana Learning Mode</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button class="hiragana-option-btn btn-primary" data-mode="chart">Character Chart</button>
+                <button class="hiragana-option-btn btn-primary" data-mode="flashcards">Flashcards</button>
+                <button class="hiragana-option-btn btn-primary" data-mode="memory-game">Memory Game</button>
+                <button class="hiragana-option-btn btn-primary" data-mode="vocabulary">Vocabulary</button>
+                <button class="hiragana-option-btn btn-primary" data-mode="speed-typing">Speed Typing</button>
+                <button class="hiragana-option-btn btn-primary" data-mode="stroke-order">Stroke Order</button>
+                <button class="hiragana-option-btn btn-primary" data-mode="multiple-choice">Multiple Choice</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Character Data for Hiragana
         const hiraganaCharacters = [
@@ -390,13 +406,14 @@
             button.addEventListener('click', (event) => {
                 const targetModule = event.currentTarget.dataset.targetModule + '-module';
                 showModule(targetModule);
-                // Specific initialization for modules
+                // Specific initialization for modules that are directly navigated to
                 if (targetModule === 'flashcards-module') {
                     initFlashcards('hiragana');
                 } else if (targetModule === 'memory-game-module') {
                     initMemoryGame('hiragana');
                 } else if (targetModule === 'chart-module') {
-                    renderHiraganaChart(); // Ensure Hiragana chart is shown by default
+                    // When navigating directly to chart, show the chart itself, not the options modal
+                    renderHiraganaChart();
                 }
             });
         });
@@ -404,7 +421,10 @@
         // --- Character Chart Module Logic ---
         const hiraganaChartGrid = document.getElementById('hiragana-chart-grid');
         const showHiraganaChartBtn = document.getElementById('show-hiragana-chart');
-        const showKatakanaChartBtn = document.getElementById('show-katakana-chart'); // Placeholder
+        const showKatakanaChartBtn = document.getElementById('show-katakana-chart');
+        const hiraganaOptionsModal = document.getElementById('hiragana-options-modal');
+        const closeHiraganaOptionsBtn = document.getElementById('close-hiragana-options');
+        const hiraganaOptionBtns = document.querySelectorAll('.hiragana-option-btn');
 
         function renderHiraganaChart() {
             hiraganaChartGrid.innerHTML = ''; // Clear previous content
@@ -424,7 +444,50 @@
             });
         }
 
-        showHiraganaChartBtn.addEventListener('click', renderHiraganaChart);
+        // Modified behavior for show-hiragana-chart button: opens the options modal
+        showHiraganaChartBtn.addEventListener('click', () => {
+            hiraganaOptionsModal.classList.remove('hidden'); // Show the options modal
+        });
+
+        // Close button for the Hiragana options modal
+        closeHiraganaOptionsBtn.addEventListener('click', () => {
+            hiraganaOptionsModal.classList.add('hidden'); // Hide the options modal
+        });
+
+        // Event listeners for buttons within the Hiragana options modal
+        hiraganaOptionBtns.forEach(button => {
+            button.addEventListener('click', (event) => {
+                const mode = event.target.dataset.mode;
+                hiraganaOptionsModal.classList.add('hidden'); // Hide the options modal
+
+                // Navigate to the selected module and initialize for Hiragana
+                showModule(`${mode}-module`);
+                switch (mode) {
+                    case 'chart':
+                        renderHiraganaChart(); // Render the actual chart
+                        break;
+                    case 'flashcards':
+                        initFlashcards('hiragana');
+                        break;
+                    case 'memory-game':
+                        initMemoryGame('hiragana');
+                        break;
+                    case 'vocabulary':
+                        // Placeholder for vocabulary init (will be implemented later)
+                        break;
+                    case 'speed-typing':
+                        // Placeholder for speed typing init (will be implemented later)
+                        break;
+                    case 'stroke-order':
+                        // Placeholder for stroke order init (will be implemented later)
+                        break;
+                    case 'multiple-choice':
+                        // Placeholder for multiple choice init (will be implemented later)
+                        break;
+                }
+            });
+        });
+
         // Placeholder for Katakana chart
         showKatakanaChartBtn.addEventListener('click', () => {
             hiraganaChartGrid.innerHTML = '<p class="col-span-full text-center text-gray-600">Katakana chart coming soon!</p>';
@@ -654,7 +717,8 @@
             if (matchedPairs === totalPairs) {
                 // Game over, all matched
                 setTimeout(() => {
-                    alert('Congratulations! You matched all the cards!'); // Use a custom modal later
+                    // Replaced alert with a console log for now, will implement custom modal later
+                    console.log('Congratulations! You matched all the cards!');
                 }, 500);
                 saveProgress(LS_MEMORY_GAME_PROGRESS, { matches: matchedPairs, total: totalPairs, timestamp: Date.now() });
             }
@@ -684,6 +748,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             showModule('chart-module'); // Show character chart by default
             renderHiraganaChart(); // Render Hiragana chart on load
+            hiraganaOptionsModal.classList.add('hidden'); // Ensure the options modal is hidden on initial load
         });
     </script>
 </body>
