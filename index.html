@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nihongo Gakushū App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            color: #334155; /* Dark slate text */
+        }
+        .card-container {
+            perspective: 1000px;
+        }
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            border-radius: 0.75rem; /* rounded-lg */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.75rem; /* rounded-lg */
+            background-color: #ffffff;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        .flashcard-input {
+            border: 2px solid #cbd5e1; /* slate-300 */
+            border-radius: 0.5rem; /* rounded-md */
+            padding: 0.5rem 1rem;
+            font-size: 1.25rem; /* text-xl */
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+        .flashcard-input:focus {
+            outline: none;
+            border-color: #6366f1; /* indigo-500 */
+        }
+        .correct-answer {
+            color: #10b981; /* emerald-500 */
+        }
+        .incorrect-answer {
+            color: #ef4444; /* red-500 */
+        }
+        .memory-card {
+            width: 100px; /* Fixed width for memory cards */
+            height: 100px; /* Fixed height for memory cards */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #6366f1; /* indigo-500 */
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .memory-card.flipped {
+            background-color: #ffffff;
+            color: #334155;
+            transform: rotateY(180deg);
+        }
+        .memory-card.matched {
+            background-color: #d1fae5; /* green-100 */
+            color: #10b981; /* emerald-500 */
+            cursor: default;
+            pointer-events: none; /* Disable clicks on matched cards */
+            opacity: 0.6; /* Visually fade matched cards */
+            transform: scale(0.95);
+        }
+        .memory-card.matched::after {
+            content: '✓';
+            position: absolute;
+            font-size: 3rem;
+            color: #10b981; /* emerald-500 */
+            opacity: 0.8;
+        }
+        /* Hide content on the back of the memory card when not flipped */
+        .memory-card .card-content {
+            transform: rotateY(180deg);
+            position: absolute;
+            backface-visibility: hidden;
+        }
+        .memory-card.flipped .card-content {
+            transform: rotateY(0deg);
+        }
+
+        /* Mobile navigation styling */
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            color: #64748b; /* slate-500 */
+            transition: color 0.2s;
+        }
+        .mobile-nav-item.active {
+            color: #6366f1; /* indigo-500 */
+        }
+        .mobile-nav-item:hover {
+            color: #4338ca; /* indigo-700 */
+        }
+        .mobile-nav-item i {
+            font-size: 1.25rem; /* text-xl */
+            margin-bottom: 0.25rem;
+        }
+        .mobile-nav-item span {
+            font-size: 0.75rem; /* text-xs */
+        }
+
+        /* General button styling */
+        .btn-primary {
+            @apply bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition-all duration-300 ease-in-out;
+        }
+        .btn-secondary {
+            @apply bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-300 transition-all duration-300 ease-in-out;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <header class="bg-indigo-700 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Nihongo Gakushū</h1>
+            <nav class="hidden md:flex space-x-6">
+                <button class="nav-btn text-lg hover:text-indigo-200 transition-colors" data-target-module="chart">Character Chart</button>
+                <button class="nav-btn text-lg hover:text-indigo-200 transition-colors" data-target-module="flashcards">Flashcards</button>
+                <button class="nav-btn text-lg hover:text-indigo-200 transition-colors" data-target-module="memory-game">Memory Game</button>
+                <button class="nav-btn text-lg hover:text-indigo-200 transition-colors" data-target-module="vocabulary">Vocabulary</button>
+                <button class="nav-btn text-lg hover:text-indigo-200 transition-colors" data-target-module="speed-typing">Speed Typing</button>
+                <button class="nav-btn text-lg hover:text-indigo-200 transition-colors" data-target-module="stroke-order">Stroke Order</button>
+                <button class="nav-btn text-lg hover:text-indigo-200 transition-colors" data-target-module="multiple-choice">Multiple Choice</button>
+                <button class="nav-btn text-lg hover:text-indigo-200 transition-colors" data-target-module="progress">Progress</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto p-4 md:p-8">
+        <section id="chart-module" class="module hidden bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-3xl font-bold text-center mb-6 text-indigo-700">Hiragana Chart</h2>
+            <div class="flex justify-center mb-6 space-x-4">
+                <button id="show-hiragana-chart" class="btn-primary">Hiragana</button>
+                <button id="show-katakana-chart" class="btn-secondary">Katakana (Coming Soon)</button>
+            </div>
+            <div id="hiragana-chart-grid" class="grid grid-cols-5 sm:grid-cols-7 lg:grid-cols-10 gap-2 md:gap-4">
+                </div>
+        </section>
+
+        <section id="flashcards-module" class="module hidden bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-3xl font-bold text-center mb-6 text-indigo-700">Flashcards</h2>
+            <div class="flex justify-center mb-6 space-x-4">
+                <button id="flashcard-hiragana-btn" class="btn-primary">Hiragana</button>
+                <button id="flashcard-katakana-btn" class="btn-secondary">Katakana (Coming Soon)</button>
+            </div>
+            <div class="max-w-md mx-auto card-container h-64 mb-6">
+                <div id="flashcard" class="card">
+                    <div class="card-front bg-indigo-100 text-indigo-800 text-6xl font-bold">
+                        <span id="flashcard-char"></span>
+                    </div>
+                    <div class="card-back flex-col bg-indigo-50 text-indigo-700 text-4xl font-semibold">
+                        <span id="flashcard-romaji-display" class="mb-4"></span>
+                        <div class="flex items-center space-x-2">
+                            <input type="text" id="flashcard-input" class="flashcard-input" placeholder="Type Romaji">
+                            <button id="check-answer-btn" class="btn-primary px-3 py-2 text-base">Check</button>
+                        </div>
+                        <p id="flashcard-feedback" class="mt-2 text-lg"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-center space-x-4">
+                <button id="next-flashcard-btn" class="btn-primary hidden">Next Card</button>
+            </div>
+        </section>
+
+        <section id="memory-game-module" class="module hidden bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-3xl font-bold text-center mb-6 text-indigo-700">Memory Game</h2>
+            <div class="flex justify-center mb-6 space-x-4">
+                <button id="memory-hiragana-btn" class="btn-primary">Hiragana</button>
+                <button id="memory-katakana-btn" class="btn-secondary">Katakana (Coming Soon)</button>
+            </div>
+            <div id="memory-game-grid" class="grid grid-cols-4 gap-4 justify-items-center">
+                </div>
+            <div class="text-center mt-6">
+                <p class="text-xl font-semibold">Matches: <span id="memory-matches">0</span> / <span id="memory-total-matches">0</span></p>
+                <button id="reset-memory-game-btn" class="btn-primary mt-4">Reset Game</button>
+            </div>
+        </section>
+
+        <section id="vocabulary-module" class="module hidden bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-3xl font-bold text-center mb-6 text-indigo-700">Vocabulary</h2>
+            <p class="text-center text-gray-600">This module is under development. Stay tuned!</p>
+        </section>
+
+        <section id="speed-typing-module" class="module hidden bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-3xl font-bold text-center mb-6 text-indigo-700">Speed Typing Challenge</h2>
+            <p class="text-center text-gray-600">This module is under development. Get ready to type!</p>
+        </section>
+
+        <section id="stroke-order-module" class="module hidden bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-3xl font-bold text-center mb-6 text-indigo-700">Stroke Order Practice</h2>
+            <p class="text-center text-gray-600">This module is under development. Learn to write beautifully!</p>
+        </section>
+
+        <section id="multiple-choice-module" class="module hidden bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-3xl font-bold text-center mb-6 text-indigo-700">Multiple Choice Quiz</h2>
+            <p class="text-center text-gray-600">This module is under development. Test your knowledge!</p>
+        </section>
+
+        <section id="progress-module" class="module hidden bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-3xl font-bold text-center mb-6 text-indigo-700">Your Progress</h2>
+            <p class="text-center text-gray-600">Track your learning journey here!</p>
+        </section>
+    </main>
+
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-xl p-2 flex justify-around border-t border-gray-200">
+        <button class="mobile-nav-item active" data-target-module="chart">
+            <i class="fas fa-table"></i>
+            <span>Chart</span>
+        </button>
+        <button class="mobile-nav-item" data-target-module="flashcards">
+            <i class="fas fa-sync-alt"></i>
+            <span>Cards</span>
+        </button>
+        <button class="mobile-nav-item" data-target-module="memory-game">
+            <i class="fas fa-brain"></i>
+            <span>Memory</span>
+        </button>
+        <button class="mobile-nav-item" data-target-module="progress">
+            <i class="fas fa-chart-line"></i>
+            <span>Progress</span>
+        </button>
+    </nav>
+
+    <script>
+        // Character Data for Hiragana
+        const hiraganaCharacters = [
+            { char: 'あ', romaji: 'a', mnemonic: 'A is for Apple, with a stem and a bite.' },
+            { char: 'い', romaji: 'i', mnemonic: 'Two "i"ce skating parallel lines.' },
+            { char: 'う', romaji: 'u', mnemonic: 'Looks like a "U" with a little tail.' },
+            { char: 'え', romaji: 'e', mnemonic: 'Energetic elephant with a trunk.' },
+            { char: 'お', romaji: 'o', mnemonic: 'An "O" with a little antenna.' },
+            { char: 'か', romaji: 'ka', mnemonic: 'A "ka"te with a string.' },
+            { char: 'き', romaji: 'ki', mnemonic: 'A "key" with two loops.' },
+            { char: 'く', romaji: 'ku', mnemonic: 'Looks like a "ku"ckoo bird\'s beak.' },
+            { char: 'け', romaji: 'ke', mnemonic: 'A "ke"g with a spout.' },
+            { char: 'こ', romaji: 'ko', mnemonic: 'Two "co"iling snakes.' },
+            { char: 'さ', romaji: 'sa', mnemonic: 'A "sa"d face with a tear.' },
+            { char: 'し', romaji: 'shi', mnemonic: 'A "she"pherd\'s crook.' },
+            { char: 'す', romaji: 'su', mnemonic: 'A "su"n with a loop.' },
+            { char: 'せ', romaji: 'se', mnemonic: 'A "se"t of teeth.' },
+            { char: 'そ', romaji: 'so', mnemonic: 'A sewing "so"und, zigzagging.' },
+            { char: 'た', romaji: 'ta', mnemonic: 'A "ta"ble with a cross.' },
+            { char: 'ち', romaji: 'chi', mnemonic: 'A "chi"cken with a comb.' },
+            { char: 'つ', romaji: 'tsu', mnemonic: 'A "tsu"nami wave.' },
+            { char: 'て', romaji: 'te', mnemonic: 'A "te"lephone receiver.' },
+            { char: 'と', romaji: 'to', mnemonic: 'A "to"e with a nail.' },
+            { char: 'な', romaji: 'na', mnemonic: 'A "na"ughty knot.' },
+            { char: 'に', romaji: 'ni', mnemonic: 'Two "ni"dges on a branch.' },
+            { char: 'ぬ', romaji: 'nu', mnemonic: 'A "nu"dle with a loop.' },
+            { char: 'ね', romaji: 'ne', mnemonic: 'A "ne"st with an egg.' },
+            { char: 'の', romaji: 'no', mnemonic: 'A "no" entry sign, a circle with a slash.' },
+            { char: 'は', romaji: 'ha', mnemonic: 'A "ha"t with a feather.' },
+            { char: 'ひ', romaji: 'hi', mnemonic: 'A "hi"ll with a peak.' },
+            { char: 'ふ', romaji: 'fu', mnemonic: 'A "fu"ll mouth blowing.' },
+            { char: 'へ', romaji: 'he', mnemonic: 'A "he"avenly gate.' },
+            { char: 'ほ', romaji: 'ho', mnemonic: 'A "ho"use with a chimney.' },
+            { char: 'ま', romaji: 'ma', mnemonic: 'A "ma"gical wand.' },
+            { char: 'み', romaji: 'mi', mnemonic: 'Three "mi"crophone stands.' },
+            { char: 'む', romaji: 'mu', mnemonic: 'A "mu"shroom with a stem.' },
+            { char: 'め', romaji: 'me', mnemonic: 'A "me"dal with a ribbon.' },
+            { char: 'も', romaji: 'mo', mnemonic: 'A "mo"untain with a path.' },
+            { char: 'や', romaji: 'ya', mnemonic: 'A "ya"cht with a sail.' },
+            { char: 'ゆ', romaji: 'yu', mnemonic: 'A "yu"rn with a string.' },
+            { char: 'よ', romaji: 'yo', mnemonic: 'A "yo"-yo string.' },
+            { char: 'ら', romaji: 'ra', mnemonic: 'A "ra"bbit with long ears.' },
+            { char: 'り', romaji: 'ri', mnemonic: 'Two "ri"vers flowing.' },
+            { char: 'る', romaji: 'ru', mnemonic: 'A "ru"ler with a curve.' },
+            { char: 'れ', romaji: 're', mnemonic: 'A "re"d ribbon.' },
+            { char: 'ろ', romaji: 'ro', mnemonic: 'A "ro"ad with a dead end.' },
+            { char: 'わ', romaji: 'wa', mnemonic: 'A "wa"ve crashing.' },
+            { char: 'を', romaji: 'wo', mnemonic: 'A "wo"rld with a circle.' },
+            { char: 'ん', romaji: 'n', mnemonic: 'A "n"ose with a nostril.' }
+        ];
+
+        // Global state for active module
+        let activeModule = 'chart';
+        let speechSynth = window.speechSynthesis;
+        let hiraganaFlashcards = [];
+        let currentFlashcardIndex = 0;
+        let flashcardHistory = []; // To track correct/incorrect answers for spaced repetition concept
+        const MAX_FLASHCARD_HISTORY = 20; // Keep history limited
+
+        // Local Storage Keys
+        const LS_FLASHCARD_PROGRESS = 'flashcardProgress';
+        const LS_MEMORY_GAME_PROGRESS = 'memoryGameProgress';
+
+        // --- Utility Functions ---
+
+        // Function to save progress to local storage
+        function saveProgress(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+            } catch (e) {
+                console.error("Error saving to local storage:", e);
+            }
+        }
+
+        // Function to load progress from local storage
+        function loadProgress(key, defaultValue) {
+            try {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : defaultValue;
+            } catch (e) {
+                console.error("Error loading from local storage:", e);
+                return defaultValue;
+            }
+        }
+
+        // Function to speak text using Web Speech API
+        function speak(text) {
+            if (speechSynth.speaking) {
+                speechSynth.cancel();
+            }
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ja-JP'; // Set language to Japanese
+            utterance.rate = 0.8; // Slightly slower rate for clarity
+            speechSynth.speak(utterance);
+        }
+
+        // Function to shuffle an array
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // --- Module Navigation ---
+        function showModule(moduleId) {
+            document.querySelectorAll('.module').forEach(module => {
+                module.classList.add('hidden');
+            });
+            document.getElementById(moduleId).classList.remove('hidden');
+            activeModule = moduleId.replace('-module', '');
+
+            // Update active state for navigation buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.dataset.targetModule === activeModule) {
+                    btn.classList.add('text-indigo-200');
+                    btn.classList.remove('hover:text-indigo-200');
+                } else {
+                    btn.classList.remove('text-indigo-200');
+                    btn.classList.add('hover:text-indigo-200');
+                }
+            });
+            document.querySelectorAll('.mobile-nav-item').forEach(btn => {
+                if (btn.dataset.targetModule === activeModule) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // Event listeners for navigation buttons
+        document.querySelectorAll('.nav-btn, .mobile-nav-item').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const targetModule = event.currentTarget.dataset.targetModule + '-module';
+                showModule(targetModule);
+                // Specific initialization for modules
+                if (targetModule === 'flashcards-module') {
+                    initFlashcards('hiragana');
+                } else if (targetModule === 'memory-game-module') {
+                    initMemoryGame('hiragana');
+                } else if (targetModule === 'chart-module') {
+                    renderHiraganaChart(); // Ensure Hiragana chart is shown by default
+                }
+            });
+        });
+
+        // --- Character Chart Module Logic ---
+        const hiraganaChartGrid = document.getElementById('hiragana-chart-grid');
+        const showHiraganaChartBtn = document.getElementById('show-hiragana-chart');
+        const showKatakanaChartBtn = document.getElementById('show-katakana-chart'); // Placeholder
+
+        function renderHiraganaChart() {
+            hiraganaChartGrid.innerHTML = ''; // Clear previous content
+            hiraganaCharacters.forEach(charData => {
+                const charDiv = document.createElement('div');
+                charDiv.className = 'bg-indigo-50 p-3 rounded-lg text-center text-4xl font-bold cursor-pointer hover:bg-indigo-100 transition-colors relative group';
+                charDiv.innerHTML = `
+                    <span>${charData.char}</span>
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-1 bg-gray-800 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                        ${charData.romaji} - ${charData.mnemonic}
+                    </div>
+                `;
+                charDiv.addEventListener('click', () => {
+                    speak(charData.char);
+                });
+                hiraganaChartGrid.appendChild(charDiv);
+            });
+        }
+
+        showHiraganaChartBtn.addEventListener('click', renderHiraganaChart);
+        // Placeholder for Katakana chart
+        showKatakanaChartBtn.addEventListener('click', () => {
+            hiraganaChartGrid.innerHTML = '<p class="col-span-full text-center text-gray-600">Katakana chart coming soon!</p>';
+        });
+
+
+        // --- Flashcards Module Logic ---
+        const flashcardContainer = document.getElementById('flashcard');
+        const flashcardChar = document.getElementById('flashcard-char');
+        const flashcardRomajiDisplay = document.getElementById('flashcard-romaji-display');
+        const flashcardInput = document.getElementById('flashcard-input');
+        const checkAnswerBtn = document.getElementById('check-answer-btn');
+        const flashcardFeedback = document.getElementById('flashcard-feedback');
+        const nextFlashcardBtn = document.getElementById('next-flashcard-btn');
+        const flashcardHiraganaBtn = document.getElementById('flashcard-hiragana-btn');
+        const flashcardKatakanaBtn = document.getElementById('flashcard-katakana-btn'); // Placeholder
+
+        function initFlashcards(type) {
+            // For now, only Hiragana is supported
+            if (type === 'hiragana') {
+                hiraganaFlashcards = shuffleArray([...hiraganaCharacters]); // Create a shuffled copy
+                flashcardHistory = loadProgress(LS_FLASHCARD_PROGRESS, []);
+                currentFlashcardIndex = 0;
+                displayFlashcard();
+            } else {
+                flashcardChar.textContent = 'N/A';
+                flashcardRomajiDisplay.textContent = '';
+                flashcardInput.value = '';
+                flashcardFeedback.textContent = 'Katakana flashcards coming soon!';
+                flashcardContainer.classList.remove('flipped');
+                flashcardInput.disabled = true;
+                checkAnswerBtn.classList.add('hidden');
+                nextFlashcardBtn.classList.add('hidden');
+            }
+        }
+
+        function displayFlashcard() {
+            if (hiraganaFlashcards.length === 0) {
+                flashcardChar.textContent = 'No cards left!';
+                flashcardRomajiDisplay.textContent = '';
+                flashcardInput.value = '';
+                flashcardFeedback.textContent = '';
+                flashcardInput.disabled = true;
+                checkAnswerBtn.classList.add('hidden');
+                nextFlashcardBtn.classList.add('hidden');
+                return;
+            }
+
+            const card = hiraganaFlashcards[currentFlashcardIndex];
+            flashcardChar.textContent = card.char;
+            flashcardRomajiDisplay.textContent = ''; // Hide romaji initially
+            flashcardInput.value = '';
+            flashcardFeedback.textContent = '';
+            flashcardInput.disabled = false;
+            checkAnswerBtn.classList.remove('hidden');
+            nextFlashcardBtn.classList.add('hidden'); // Hide next button until answer is checked
+            flashcardContainer.classList.remove('flipped'); // Ensure card is front-facing
+            flashcardInput.focus(); // Auto-focus input
+            speak(card.char); // Speak the character
+        }
+
+        function checkFlashcardAnswer() {
+            const card = hiraganaFlashcards[currentFlashcardIndex];
+            const userAnswer = flashcardInput.value.trim().toLowerCase();
+            const correctAnswer = card.romaji.toLowerCase();
+
+            flashcardRomajiDisplay.textContent = `Correct: ${card.romaji}`; // Show correct answer
+            flashcardContainer.classList.add('flipped'); // Flip the card
+
+            if (userAnswer === correctAnswer) {
+                flashcardFeedback.textContent = 'Correct!';
+                flashcardFeedback.className = 'mt-2 text-lg correct-answer';
+                recordFlashcardProgress(card.char, true);
+                // Auto-advance
+                setTimeout(() => {
+                    moveToNextFlashcard();
+                }, 1000); // Wait 1 second before moving
+            } else {
+                flashcardFeedback.textContent = `Incorrect. Try again!`;
+                flashcardFeedback.className = 'mt-2 text-lg incorrect-answer';
+                recordFlashcardProgress(card.char, false);
+                nextFlashcardBtn.classList.remove('hidden'); // Show next button for manual advance
+            }
+            flashcardInput.disabled = true;
+            checkAnswerBtn.classList.add('hidden');
+        }
+
+        function moveToNextFlashcard() {
+            currentFlashcardIndex++;
+            if (currentFlashcardIndex >= hiraganaFlashcards.length) {
+                // Reshuffle and restart if all cards are done
+                hiraganaFlashcards = shuffleArray([...hiraganaCharacters]);
+                currentFlashcardIndex = 0;
+                flashcardFeedback.textContent = 'All cards reviewed! Starting over.';
+            }
+            displayFlashcard();
+        }
+
+        function recordFlashcardProgress(char, isCorrect) {
+            // Simple spaced repetition logic:
+            // If incorrect, add it back to the beginning of the queue more frequently
+            // If correct, remove it from the immediate queue, let it appear later by natural shuffle
+            const indexInQueue = hiraganaFlashcards.findIndex(c => c.char === char);
+
+            if (!isCorrect && indexInQueue !== -1) {
+                // Move incorrect card closer to the front for review
+                const [movedCard] = hiraganaFlashcards.splice(indexInQueue, 1);
+                // Insert it at a random position within the next few cards (e.g., next 3-5 cards)
+                const insertIndex = Math.min(currentFlashcardIndex + Math.floor(Math.random() * 3) + 1, hiraganaFlashcards.length);
+                hiraganaFlashcards.splice(insertIndex, 0, movedCard);
+            }
+
+            // Update history for overall progress tracking (though not yet displayed)
+            flashcardHistory.push({ char, isCorrect, timestamp: Date.now() });
+            if (flashcardHistory.length > MAX_FLASHCARD_HISTORY) {
+                flashcardHistory.shift(); // Remove oldest entry
+            }
+            saveProgress(LS_FLASHCARD_PROGRESS, flashcardHistory);
+        }
+
+        flashcardHiraganaBtn.addEventListener('click', () => initFlashcards('hiragana'));
+        flashcardKatakanaBtn.addEventListener('click', () => initFlashcards('katakana')); // Placeholder
+        checkAnswerBtn.addEventListener('click', checkFlashcardAnswer);
+        nextFlashcardBtn.addEventListener('click', moveToNextFlashcard);
+        flashcardInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter' && !flashcardInput.disabled) {
+                checkFlashcardAnswer();
+            }
+        });
+
+
+        // --- Memory Game Module Logic ---
+        const memoryGameGrid = document.getElementById('memory-game-grid');
+        const memoryMatchesSpan = document.getElementById('memory-matches');
+        const memoryTotalMatchesSpan = document.getElementById('memory-total-matches');
+        const resetMemoryGameBtn = document.getElementById('reset-memory-game-btn');
+        const memoryHiraganaBtn = document.getElementById('memory-hiragana-btn');
+        const memoryKatakanaBtn = document.getElementById('memory-katakana-btn'); // Placeholder
+
+        let memoryCards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let totalPairs = 0;
+        let lockBoard = false; // To prevent rapid clicks
+
+        function initMemoryGame(type) {
+            memoryGameGrid.innerHTML = ''; // Clear previous cards
+            flippedCards = [];
+            matchedPairs = 0;
+            lockBoard = false;
+
+            let gameCharacters = [];
+            if (type === 'hiragana') {
+                // Select a subset of hiragana characters for the game (e.g., 8 pairs = 16 cards)
+                gameCharacters = shuffleArray([...hiraganaCharacters]).slice(0, 8);
+            } else {
+                memoryGameGrid.innerHTML = '<p class="col-span-full text-center text-gray-600">Katakana memory game coming soon!</p>';
+                memoryMatchesSpan.textContent = 0;
+                memoryTotalMatchesSpan.textContent = 0;
+                return;
+            }
+
+            // Create pairs (character and romaji)
+            memoryCards = [];
+            gameCharacters.forEach(item => {
+                memoryCards.push({ value: item.char, type: 'char', id: item.char + '-char' });
+                memoryCards.push({ value: item.romaji, type: 'romaji', id: item.char + '-romaji' });
+            });
+
+            memoryCards = shuffleArray(memoryCards);
+            totalPairs = gameCharacters.length;
+            memoryTotalMatchesSpan.textContent = totalPairs;
+            memoryMatchesSpan.textContent = matchedPairs;
+
+            memoryCards.forEach(cardData => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'memory-card card-container';
+                cardElement.dataset.value = cardData.value;
+                cardElement.dataset.type = cardData.type;
+                cardElement.dataset.pairId = cardData.value; // Use the character/romaji as pair ID
+
+                cardElement.innerHTML = `
+                    <div class="card">
+                        <div class="card-front bg-indigo-500 text-white text-4xl font-bold">?</div>
+                        <div class="card-back bg-white text-gray-800 text-4xl font-bold">
+                            <span class="card-content">${cardData.value}</span>
+                        </div>
+                    </div>
+                `;
+                cardElement.addEventListener('click', () => flipMemoryCard(cardElement));
+                memoryGameGrid.appendChild(cardElement);
+            });
+        }
+
+        function flipMemoryCard(cardElement) {
+            if (lockBoard) return;
+            if (cardElement.classList.contains('flipped') || cardElement.classList.contains('matched')) return;
+
+            cardElement.querySelector('.card').classList.add('flipped');
+            flippedCards.push(cardElement);
+
+            if (flippedCards.length === 2) {
+                lockBoard = true;
+                checkForMatch();
+            }
+        }
+
+        function checkForMatch() {
+            const [card1, card2] = flippedCards;
+            const isMatch = (card1.dataset.pairId === card2.dataset.pairId);
+
+            if (isMatch) {
+                disableCards();
+            } else {
+                unflipCards();
+            }
+        }
+
+        function disableCards() {
+            const [card1, card2] = flippedCards;
+            card1.classList.add('matched');
+            card2.classList.add('matched');
+            matchedPairs++;
+            memoryMatchesSpan.textContent = matchedPairs;
+            resetFlippedCards();
+
+            if (matchedPairs === totalPairs) {
+                // Game over, all matched
+                setTimeout(() => {
+                    alert('Congratulations! You matched all the cards!'); // Use a custom modal later
+                }, 500);
+                saveProgress(LS_MEMORY_GAME_PROGRESS, { matches: matchedPairs, total: totalPairs, timestamp: Date.now() });
+            }
+        }
+
+        function unflipCards() {
+            setTimeout(() => {
+                flippedCards.forEach(cardElement => {
+                    cardElement.querySelector('.card').classList.remove('flipped');
+                });
+                resetFlippedCards();
+            }, 1000); // Keep cards flipped for 1 second
+        }
+
+        function resetFlippedCards() {
+            [flippedCards[0], flippedCards[1]] = [null, null]; // Clear references
+            flippedCards = [];
+            lockBoard = false;
+        }
+
+        memoryHiraganaBtn.addEventListener('click', () => initMemoryGame('hiragana'));
+        memoryKatakanaBtn.addEventListener('click', () => initMemoryGame('katakana')); // Placeholder
+        resetMemoryGameBtn.addEventListener('click', () => initMemoryGame('hiragana')); // Reset to Hiragana
+
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            showModule('chart-module'); // Show character chart by default
+            renderHiraganaChart(); // Render Hiragana chart on load
+        });
+    </script>
+</body>
+</html>
